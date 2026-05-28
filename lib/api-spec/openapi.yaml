@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Market Context Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: instruments
+    description: Watched instruments
+  - name: analysis
+    description: Pattern, liquidity, and forecast analysis
+  - name: narrative
+    description: AI-generated market narratives
+  - name: setups
+    description: Trade setup recommendations
+  - name: dashboard
+    description: Dashboard aggregates and activity
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +32,639 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /instruments:
+    get:
+      operationId: listInstruments
+      tags: [instruments]
+      summary: List all watched instruments
+      responses:
+        "200":
+          description: List of instruments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Instrument"
+    post:
+      operationId: addInstrument
+      tags: [instruments]
+      summary: Add an instrument to watchlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstrumentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instrument"
+
+  /instruments/{symbol}:
+    get:
+      operationId: getInstrument
+      tags: [instruments]
+      summary: Get a single instrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Instrument
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instrument"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: removeInstrument
+      tags: [instruments]
+      summary: Remove an instrument from watchlist
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Removed
+
+  /instruments/{symbol}/candles/{timeframe}:
+    get:
+      operationId: getCandles
+      tags: [analysis]
+      summary: Get OHLCV candle data for an instrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Candle data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Candle"
+
+  /instruments/{symbol}/patterns/{timeframe}:
+    get:
+      operationId: getPatterns
+      tags: [analysis]
+      summary: Get recognized chart patterns for an instrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Recognized patterns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pattern"
+
+  /instruments/{symbol}/liquidity-zones/{timeframe}:
+    get:
+      operationId: getLiquidityZones
+      tags: [analysis]
+      summary: Get liquidity zones and key price levels
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Liquidity zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LiquidityZone"
+
+  /instruments/{symbol}/forecast/{timeframe}:
+    get:
+      operationId: getForecast
+      tags: [analysis]
+      summary: Get probabilistic price forecast
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Forecast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Forecast"
+
+  /instruments/{symbol}/narrative/{timeframe}:
+    get:
+      operationId: getNarrative
+      tags: [narrative]
+      summary: Get AI-generated market narrative
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Market narrative
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketNarrative"
+
+  /instruments/{symbol}/narrative:
+    post:
+      operationId: generateNarrative
+      tags: [narrative]
+      summary: Trigger a fresh AI narrative generation
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NarrativeRequest"
+      responses:
+        "200":
+          description: Fresh narrative
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketNarrative"
+
+  /instruments/{symbol}/setups/{timeframe}:
+    get:
+      operationId: getTradeSetups
+      tags: [setups]
+      summary: Get recommended trade setups
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: timeframe
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Trade setups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TradeSetup"
+
+  /instruments/{symbol}/analyze:
+    post:
+      operationId: runAnalysis
+      tags: [analysis]
+      summary: Trigger a fresh full analysis for an instrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisRequest"
+      responses:
+        "200":
+          description: Analysis triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get aggregated summary across all watched instruments
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent signals, patterns, and events across all instruments
+      responses:
+        "200":
+          description: Recent activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  /dashboard/top-setups:
+    get:
+      operationId: getTopSetups
+      tags: [dashboard]
+      summary: Get highest-confidence trade setups across all instruments
+      responses:
+        "200":
+          description: Top setups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TradeSetup"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    Instrument:
+      type: object
+      required: [id, symbol, name, category, currentPrice, priceChange24h, priceChangePct24h, volume24h, marketSentiment, addedAt]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [crypto, forex, equities, commodities, indices]
+        currentPrice:
+          type: number
+        priceChange24h:
+          type: number
+        priceChangePct24h:
+          type: number
+        volume24h:
+          type: number
+        marketSentiment:
+          type: string
+          enum: [strongly_bullish, bullish, neutral, bearish, strongly_bearish]
+        addedAt:
+          type: string
+
+    InstrumentInput:
+      type: object
+      required: [symbol, name, category]
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [crypto, forex, equities, commodities, indices]
+
+    Candle:
+      type: object
+      required: [timestamp, open, high, low, close, volume]
+      properties:
+        timestamp:
+          type: string
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: number
+
+    Pattern:
+      type: object
+      required: [id, instrumentId, symbol, patternType, direction, confidence, timeframe, startTime, endTime, description, priceLevel, status]
+      properties:
+        id:
+          type: integer
+        instrumentId:
+          type: integer
+        symbol:
+          type: string
+        patternType:
+          type: string
+        direction:
+          type: string
+          enum: [bullish, bearish, neutral]
+        confidence:
+          type: number
+        timeframe:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        description:
+          type: string
+        priceLevel:
+          type: number
+        status:
+          type: string
+          enum: [forming, confirmed, invalidated]
+
+    LiquidityZone:
+      type: object
+      required: [id, instrumentId, symbol, zoneType, priceLevel, priceRangeHigh, priceRangeLow, strength, timeframe, description, testedCount, lastTested]
+      properties:
+        id:
+          type: integer
+        instrumentId:
+          type: integer
+        symbol:
+          type: string
+        zoneType:
+          type: string
+          enum: [support, resistance, order_block, fair_value_gap, liquidity_pool]
+        priceLevel:
+          type: number
+        priceRangeHigh:
+          type: number
+        priceRangeLow:
+          type: number
+        strength:
+          type: string
+          enum: [weak, moderate, strong, extreme]
+        timeframe:
+          type: string
+        description:
+          type: string
+        testedCount:
+          type: integer
+        lastTested:
+          type: ["string", "null"]
+
+    Forecast:
+      type: object
+      required: [id, instrumentId, symbol, timeframe, currentPrice, bullishTarget, bearishTarget, baseTarget, bullishProbability, bearishProbability, neutralProbability, confidence, horizon, keyDrivers, generatedAt]
+      properties:
+        id:
+          type: integer
+        instrumentId:
+          type: integer
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        currentPrice:
+          type: number
+        bullishTarget:
+          type: number
+        bearishTarget:
+          type: number
+        baseTarget:
+          type: number
+        bullishProbability:
+          type: number
+        bearishProbability:
+          type: number
+        neutralProbability:
+          type: number
+        confidence:
+          type: number
+        horizon:
+          type: string
+        keyDrivers:
+          type: array
+          items:
+            type: string
+        generatedAt:
+          type: string
+
+    MarketNarrative:
+      type: object
+      required: [id, instrumentId, symbol, timeframe, headline, summary, bullishCase, bearishCase, keyLevels, sentiment, riskFactors, generatedAt]
+      properties:
+        id:
+          type: integer
+        instrumentId:
+          type: integer
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        headline:
+          type: string
+        summary:
+          type: string
+        bullishCase:
+          type: string
+        bearishCase:
+          type: string
+        keyLevels:
+          type: array
+          items:
+            type: number
+        sentiment:
+          type: string
+          enum: [strongly_bullish, bullish, neutral, bearish, strongly_bearish]
+        riskFactors:
+          type: array
+          items:
+            type: string
+        generatedAt:
+          type: string
+
+    NarrativeRequest:
+      type: object
+      required: [timeframe]
+      properties:
+        timeframe:
+          type: string
+          enum: [1m, 5m, 15m, 1h, 4h, 1d]
+
+    TradeSetup:
+      type: object
+      required: [id, instrumentId, symbol, direction, setupType, entryPrice, stopLoss, takeProfits, riskReward, confidence, timeframe, rationale, status, createdAt]
+      properties:
+        id:
+          type: integer
+        instrumentId:
+          type: integer
+        symbol:
+          type: string
+        direction:
+          type: string
+          enum: [long, short]
+        setupType:
+          type: string
+        entryPrice:
+          type: number
+        stopLoss:
+          type: number
+        takeProfits:
+          type: array
+          items:
+            type: number
+        riskReward:
+          type: number
+        confidence:
+          type: number
+        timeframe:
+          type: string
+        rationale:
+          type: string
+        status:
+          type: string
+          enum: [active, triggered, completed, invalidated]
+        createdAt:
+          type: string
+
+    AnalysisRequest:
+      type: object
+      required: [timeframe]
+      properties:
+        timeframe:
+          type: string
+          enum: [1m, 5m, 15m, 1h, 4h, 1d]
+
+    AnalysisResult:
+      type: object
+      required: [symbol, status, patternsFound, zonesFound, setupsFound, message]
+      properties:
+        symbol:
+          type: string
+        status:
+          type: string
+        patternsFound:
+          type: integer
+        zonesFound:
+          type: integer
+        setupsFound:
+          type: integer
+        message:
+          type: string
+
+    DashboardSummary:
+      type: object
+      required: [totalInstruments, bullishCount, bearishCount, neutralCount, activeSetupsCount, highConfidencePatterns, topMover, topMoverPct, avgConfidence, lastUpdated]
+      properties:
+        totalInstruments:
+          type: integer
+        bullishCount:
+          type: integer
+        bearishCount:
+          type: integer
+        neutralCount:
+          type: integer
+        activeSetupsCount:
+          type: integer
+        highConfidencePatterns:
+          type: integer
+        topMover:
+          type: string
+        topMoverPct:
+          type: number
+        avgConfidence:
+          type: number
+        lastUpdated:
+          type: string
+
+    ActivityEvent:
+      type: object
+      required: [id, symbol, eventType, title, description, severity, timestamp]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        eventType:
+          type: string
+          enum: [pattern_detected, setup_triggered, level_tested, narrative_updated, forecast_revised]
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, alert]
+        timestamp:
+          type: string
