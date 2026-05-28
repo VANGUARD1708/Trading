@@ -322,3 +322,184 @@ export const GetTopSetupsResponseItem = zod.object({
 export const GetTopSetupsResponse = zod.array(GetTopSetupsResponseItem)
 
 
+/**
+ * @summary List all conversations
+ */
+export const ListAnthropicConversationsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAnthropicConversationsResponse = zod.array(ListAnthropicConversationsResponseItem)
+
+
+/**
+ * @summary Create a new conversation
+ */
+export const CreateAnthropicConversationBody = zod.object({
+  "title": zod.string()
+})
+
+
+/**
+ * @summary Get conversation with messages
+ */
+export const GetAnthropicConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAnthropicConversationResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "conversationId": zod.number(),
+  "role": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Delete a conversation
+ */
+export const DeleteAnthropicConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List messages in a conversation
+ */
+export const ListAnthropicMessagesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListAnthropicMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "conversationId": zod.number(),
+  "role": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAnthropicMessagesResponse = zod.array(ListAnthropicMessagesResponseItem)
+
+
+/**
+ * @summary Send a message and receive an AI response (SSE stream)
+ */
+export const SendAnthropicMessageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SendAnthropicMessageBody = zod.object({
+  "content": zod.string()
+})
+
+
+/**
+ * @summary Run a Monte Carlo price path simulation
+ */
+export const runSimulationBodyNumPathsDefault = 20;
+export const runSimulationBodyHorizonCandlesDefault = 50;
+
+export const RunSimulationBody = zod.object({
+  "symbol": zod.string(),
+  "scenarioType": zod.enum(['breakout_bull', 'breakdown_bear', 'range_bound', 'fed_rate_hike', 'market_crash', 'institutional_accumulation', 'custom']),
+  "timeframe": zod.enum(['1h', '4h', '1d']),
+  "numPaths": zod.number().default(runSimulationBodyNumPathsDefault),
+  "horizonCandles": zod.number().default(runSimulationBodyHorizonCandlesDefault),
+  "customPrompt": zod.string().optional()
+})
+
+export const RunSimulationResponse = zod.object({
+  "simulation": zod.object({
+  "id": zod.number(),
+  "symbol": zod.string(),
+  "scenarioType": zod.string(),
+  "customPrompt": zod.string(),
+  "timeframe": zod.string(),
+  "numPaths": zod.number(),
+  "horizonCandles": zod.number(),
+  "createdAt": zod.string()
+}),
+  "paths": zod.array(zod.object({
+  "id": zod.number(),
+  "simulationId": zod.number(),
+  "pathIndex": zod.number(),
+  "label": zod.string(),
+  "probability": zod.number(),
+  "prices": zod.array(zod.number()),
+  "createdAt": zod.string()
+})),
+  "summary": zod.object({
+  "bullishProbability": zod.number(),
+  "bearishProbability": zod.number(),
+  "neutralProbability": zod.number(),
+  "expectedReturn": zod.number(),
+  "maxUpside": zod.number(),
+  "maxDownside": zod.number(),
+  "confidenceInterval95High": zod.number(),
+  "confidenceInterval95Low": zod.number()
+})
+})
+
+
+/**
+ * @summary Get a past simulation result
+ */
+export const GetSimulationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSimulationResponse = zod.object({
+  "simulation": zod.object({
+  "id": zod.number(),
+  "symbol": zod.string(),
+  "scenarioType": zod.string(),
+  "customPrompt": zod.string(),
+  "timeframe": zod.string(),
+  "numPaths": zod.number(),
+  "horizonCandles": zod.number(),
+  "createdAt": zod.string()
+}),
+  "paths": zod.array(zod.object({
+  "id": zod.number(),
+  "simulationId": zod.number(),
+  "pathIndex": zod.number(),
+  "label": zod.string(),
+  "probability": zod.number(),
+  "prices": zod.array(zod.number()),
+  "createdAt": zod.string()
+})),
+  "summary": zod.object({
+  "bullishProbability": zod.number(),
+  "bearishProbability": zod.number(),
+  "neutralProbability": zod.number(),
+  "expectedReturn": zod.number(),
+  "maxUpside": zod.number(),
+  "maxDownside": zod.number(),
+  "confidenceInterval95High": zod.number(),
+  "confidenceInterval95Low": zod.number()
+})
+})
+
+
+/**
+ * @summary List past simulations
+ */
+export const ListSimulationsResponseItem = zod.object({
+  "id": zod.number(),
+  "symbol": zod.string(),
+  "scenarioType": zod.string(),
+  "customPrompt": zod.string(),
+  "timeframe": zod.string(),
+  "numPaths": zod.number(),
+  "horizonCandles": zod.number(),
+  "createdAt": zod.string()
+})
+export const ListSimulationsResponse = zod.array(ListSimulationsResponseItem)
+
+

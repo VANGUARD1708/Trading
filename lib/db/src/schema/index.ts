@@ -5,3 +5,6 @@ export * from "./forecasts";
 export * from "./narratives";
 export * from "./trade_setups";
 export * from "./activity_events";
+export * from "./conversations";
+export * from "./messages";
+export * from "./scenario_simulations";

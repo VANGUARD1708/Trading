@@ -6,6 +6,9 @@ import { Layout } from "@/components/layout";
 import Dashboard from "@/pages/dashboard";
 import Watchlist from "@/pages/watchlist";
 import InstrumentDetail from "@/pages/instrument-detail";
+import Analyst from "@/pages/analyst";
+import Simulator from "@/pages/simulator";
+import MarketMap from "@/pages/market-map";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -24,6 +27,9 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/watchlist" component={Watchlist} />
         <Route path="/instruments/:symbol" component={InstrumentDetail} />
+        <Route path="/analyst" component={Analyst} />
+        <Route path="/simulator" component={Simulator} />
+        <Route path="/market-map" component={MarketMap} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

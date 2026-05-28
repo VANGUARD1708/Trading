@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, List, Activity, Settings } from "lucide-react";
+import { LayoutDashboard, List, Activity, Settings, Bot, FlaskConical, Globe } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -7,12 +7,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/", label: "Command Center", icon: LayoutDashboard },
     { href: "/watchlist", label: "Watchlist", icon: List },
+    { href: "/analyst", label: "AI Analyst", icon: Bot },
+    { href: "/simulator", label: "Simulator", icon: FlaskConical },
+    { href: "/market-map", label: "3D Market Map", icon: Globe },
   ];
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       {/* Sidebar */}
-      <div className="w-64 border-r border-border bg-card flex flex-col">
+      <div className="w-64 border-r border-border bg-card flex flex-col z-20">
         <div className="p-6">
           <div className="flex items-center gap-2 text-primary">
             <Activity className="h-6 w-6" />
@@ -43,7 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(0, 255, 204, 0.03) 0%, transparent 50%)' }} />
-        <main className="flex-1 overflow-y-auto p-8 z-10">
+        <main className="flex-1 overflow-y-auto p-0 md:p-8 z-10 flex flex-col">
           {children}
         </main>
       </div>

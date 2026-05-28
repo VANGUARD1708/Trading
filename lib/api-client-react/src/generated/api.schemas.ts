@@ -307,3 +307,105 @@ export interface ActivityEvent {
   timestamp: string;
 }
 
+export interface AnthropicConversation {
+  id: number;
+  title: string;
+  createdAt: string;
+}
+
+export interface AnthropicMessage {
+  id: number;
+  conversationId: number;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface AnthropicConversationInput {
+  title: string;
+}
+
+export interface AnthropicMessageInput {
+  content: string;
+}
+
+export interface AnthropicConversationWithMessages {
+  id: number;
+  title: string;
+  createdAt: string;
+  messages: AnthropicMessage[];
+}
+
+export interface AnthropicError {
+  error: string;
+}
+
+export interface ScenarioSimulation {
+  id: number;
+  symbol: string;
+  scenarioType: string;
+  customPrompt: string;
+  timeframe: string;
+  numPaths: number;
+  horizonCandles: number;
+  createdAt: string;
+}
+
+export interface ScenarioPath {
+  id: number;
+  simulationId: number;
+  pathIndex: number;
+  label: string;
+  probability: number;
+  prices: number[];
+  createdAt: string;
+}
+
+export interface ScenarioSummary {
+  bullishProbability: number;
+  bearishProbability: number;
+  neutralProbability: number;
+  expectedReturn: number;
+  maxUpside: number;
+  maxDownside: number;
+  confidenceInterval95High: number;
+  confidenceInterval95Low: number;
+}
+
+export interface ScenarioResult {
+  simulation: ScenarioSimulation;
+  paths: ScenarioPath[];
+  summary: ScenarioSummary;
+}
+
+export type SimulationRequestScenarioType = typeof SimulationRequestScenarioType[keyof typeof SimulationRequestScenarioType];
+
+
+export const SimulationRequestScenarioType = {
+  breakout_bull: 'breakout_bull',
+  breakdown_bear: 'breakdown_bear',
+  range_bound: 'range_bound',
+  fed_rate_hike: 'fed_rate_hike',
+  market_crash: 'market_crash',
+  institutional_accumulation: 'institutional_accumulation',
+  custom: 'custom',
+} as const;
+
+export type SimulationRequestTimeframe = typeof SimulationRequestTimeframe[keyof typeof SimulationRequestTimeframe];
+
+
+export const SimulationRequestTimeframe = {
+  '1h': '1h',
+  '4h': '4h',
+  '1d': '1d',
+} as const;
+
+export interface SimulationRequest {
+  symbol: string;
+  scenarioType: SimulationRequestScenarioType;
+  timeframe: SimulationRequestTimeframe;
+  numPaths?: number;
+  horizonCandles?: number;
+  customPrompt?: string;
+}
+
