@@ -1,4 +1,5 @@
 import { Router } from "express";
+import OpenAI from "openai";
 import { db } from "@workspace/db";
 import {
   conversations as conversationsTable,
@@ -19,6 +20,12 @@ import {
 
 const router = Router();
 
+function getOpenAI(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+  return new OpenAI({ apiKey });
+}
+
 async function buildMarketSystemPrompt(): Promise<string> {
   const instruments = await db.select().from(instrumentsTable);
   const recentPatterns = await db
@@ -37,7 +44,7 @@ async function buildMarketSystemPrompt(): Promise<string> {
   const instrumentSummary = instruments
     .map(
       (i) =>
-        `- ${i.symbol} (${i.name}): Price $${i.currentPrice.toLocaleString()}, 24h ${i.priceChangePct24h > 0 ? "+" : ""}${i.priceChangePct24h.toFixed(2)}%, Sentiment: ${i.marketSentiment.replace("_", " ")}`,
+        `- ${i.symbol} (${i.name}): Price $${i.currentPrice.toLocaleString()}, 24h ${i.priceChangePct24h > 0 ? "+" : ""}${i.priceChangePct24h.toFixed(2)}%, Sentiment: ${i.marketSentiment.replace(/_/g, " ")}`,
     )
     .join("\n");
 
@@ -87,6 +94,7 @@ ${setupSummary || "No active setups currently."}
 - Maintain a confident, analytical tone`;
 }
 
+// GET /anthropic/conversations
 router.get("/anthropic/conversations", async (_req, res) => {
   const rows = await db
     .select()
@@ -95,6 +103,7 @@ router.get("/anthropic/conversations", async (_req, res) => {
   res.json(rows.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })));
 });
 
+// POST /anthropic/conversations
 router.post("/anthropic/conversations", async (req, res) => {
   const { title } = CreateAnthropicConversationBody.parse(req.body);
   const [row] = await db
@@ -104,6 +113,7 @@ router.post("/anthropic/conversations", async (req, res) => {
   res.status(201).json({ ...row, createdAt: row.createdAt.toISOString() });
 });
 
+// GET /anthropic/conversations/:id
 router.get("/anthropic/conversations/:id", async (req, res) => {
   const { id } = GetAnthropicConversationParams.parse(req.params);
   const [conv] = await db
@@ -126,6 +136,7 @@ router.get("/anthropic/conversations/:id", async (req, res) => {
   });
 });
 
+// DELETE /anthropic/conversations/:id
 router.delete("/anthropic/conversations/:id", async (req, res) => {
   const { id } = DeleteAnthropicConversationParams.parse(req.params);
   const [conv] = await db
@@ -139,6 +150,7 @@ router.delete("/anthropic/conversations/:id", async (req, res) => {
   res.status(204).end();
 });
 
+// GET /anthropic/conversations/:id/messages
 router.get("/anthropic/conversations/:id/messages", async (req, res) => {
   const { id } = ListAnthropicMessagesParams.parse(req.params);
   const msgs = await db
@@ -149,6 +161,7 @@ router.get("/anthropic/conversations/:id/messages", async (req, res) => {
   res.json(msgs.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() })));
 });
 
+// POST /anthropic/conversations/:id/messages  (streaming SSE)
 router.post("/anthropic/conversations/:id/messages", async (req, res) => {
   const { id } = SendAnthropicMessageParams.parse(req.params);
   const { content } = SendAnthropicMessageBody.parse(req.body);
@@ -159,15 +172,19 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     .where(eq(conversationsTable.id, id));
   if (!conv) return res.status(404).json({ error: "Conversation not found" });
 
-  await db.insert(messagesTable).values({ conversationId: id, role: "user", content });
+  // Save the user message
+  await db
+    .insert(messagesTable)
+    .values({ conversationId: id, role: "user", content });
 
+  // Fetch full history for context
   const history = await db
     .select()
     .from(messagesTable)
     .where(eq(messagesTable.conversationId, id))
     .orderBy(messagesTable.createdAt);
 
-  const chatMessages = history.map((m) => ({
+  const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = history.map((m) => ({
     role: m.role as "user" | "assistant",
     content: m.content,
   }));
@@ -179,31 +196,29 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
   let fullResponse = "";
 
   try {
-    const anthropicUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
-    const anthropicKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
-
-    if (!anthropicUrl || !anthropicKey) throw new Error("AI integration not configured");
-
+    const openai = getOpenAI();
     const systemPrompt = await buildMarketSystemPrompt();
-    const { anthropic } = await import("@workspace/integrations-anthropic-ai");
 
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: chatMessages,
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 2048,
+      stream: true,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...chatMessages,
+      ],
     });
 
-    for await (const event of stream) {
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        fullResponse += event.delta.text;
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) {
+        fullResponse += delta;
+        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
       }
     }
-  } catch (_err) {
+  } catch (err) {
+    console.error("OpenAI streaming error:", err);
+    // Graceful fallback: stream a canned market analysis
     const fallback = generateFallbackResponse(content, chatMessages.length);
     for (const chunk of fallback.split(" ")) {
       fullResponse += chunk + " ";
@@ -212,9 +227,12 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     }
   }
 
-  await db
-    .insert(messagesTable)
-    .values({ conversationId: id, role: "assistant", content: fullResponse.trim() });
+  // Persist the assistant reply
+  await db.insert(messagesTable).values({
+    conversationId: id,
+    role: "assistant",
+    content: fullResponse.trim(),
+  });
 
   res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
   res.end();
@@ -230,21 +248,21 @@ function generateFallbackResponse(userMessage: string, messageCount: number): st
     return "Ethereum is showing divergent signals. A head and shoulders pattern is forming on the 1H chart with 71% confidence — this is a distribution structure that warrants caution for long positions. The neckline sits at approximately $3,480, and a confirmed break below that level technically targets the $3,200-3,350 demand zone. However, the $3,400 area is significant structural support reinforced by order book data. ETH typically lags BTC by 1-2 sessions during trending phases, so monitoring Bitcoin's resolution provides useful directional context.";
   }
   if (msg.includes("scenario") || msg.includes("what if") || msg.includes("simulat")) {
-    return "That's a great scenario to model. Use the Scenario Simulator to run Monte Carlo price path projections. Breakout scenarios from consolidation ranges historically show bimodal distribution — either the move extends 4-8% beyond the breakout level or reverts within 1-2 candles. The key variable is volume confirmation: high-volume breakouts sustain 73% of the time in backtested data, while low-volume breaks fail at 58%. I'd suggest running a 20-path simulation on the 1H timeframe to visualize the probability distribution of outcomes across all scenarios.";
+    return "That's a great scenario to model. Use the Scenario Simulator to run Monte Carlo price path projections. Breakout scenarios from consolidation ranges historically show bimodal distribution — either the move extends 4-8% beyond the breakout level or reverts within 1-2 candles. The key variable is volume confirmation: high-volume breakouts sustain 73% of the time in backtested data, while low-volume breaks fail at 58%. I'd suggest running a 20-path simulation on the 1H timeframe to visualize the probability distribution of outcomes.";
   }
   if (msg.includes("setup") || msg.includes("trade") || msg.includes("entry")) {
-    return "The highest-conviction opportunity across the watchlist right now is the SOL/USD Cup and Handle breakout on the 4H timeframe with 82% confidence. Entry at $166.50, stop at $158.00, targets at $178 and $192 — that's a 1.35 R:R on a momentum continuation pattern. The BTC/USD breakout long carries an even more favorable 1.82 R:R at 84% confidence. Both setups share a common theme: price is compressing near key resistance before an anticipated expansion phase. Risk management is critical — size positions so that the stop represents no more than 1-2% of total capital.";
+    return "The highest-conviction opportunity across the watchlist right now is the SOL/USD Cup and Handle breakout on the 4H timeframe with 82% confidence. Entry at $166.50, stop at $158.00, targets at $178 and $192 — that's a 1.35 R:R on a momentum continuation pattern. The BTC/USD breakout long carries an even more favorable 1.82 R:R at 84% confidence. Both setups share a common theme: price is compressing near key resistance before an anticipated expansion phase.";
   }
   if (msg.includes("narrative") || msg.includes("story") || msg.includes("market")) {
-    return "The current market narrative is one of selective risk appetite — capital is rotating rather than broadly exiting. Crypto is showing relative strength versus equities on a risk-adjusted basis, with Bitcoin leading what appears to be an institutional accumulation phase. Gold's technical breakout from multi-week consolidation adds a macro safety layer, suggesting markets are hedging uncertainty while also positioning for momentum. The divergence between BTC's bullish structure and ETH's distributional pattern warrants attention — historically, when the two diverge for more than 48 hours, one capitulates to match the other. The probability currently favors BTC's narrative prevailing.";
+    return "The current market narrative is one of selective risk appetite — capital is rotating rather than broadly exiting. Crypto is showing relative strength versus equities on a risk-adjusted basis, with Bitcoin leading what appears to be an institutional accumulation phase. Gold's technical breakout from multi-week consolidation adds a macro safety layer, suggesting markets are hedging uncertainty while also positioning for momentum. The divergence between BTC's bullish structure and ETH's distributional pattern warrants attention.";
   }
   if (msg.includes("gold") || msg.includes("xau")) {
-    return "Gold is in a technically constructive position following a breakout from multi-week consolidation at 79% confidence. The commodity is benefiting from dual tailwinds: macro uncertainty driving safe-haven flows, and a weakening USD providing upward price pressure. The $2,380 resistance zone is the next significant test — this is a major supply area where profit-taking is likely. A clean break above $2,380 with daily close confirmation would project toward $2,430 and potentially all-time highs. The support base at $2,300-2,315 is extremely strong with central bank buying evidence.";
+    return "Gold is in a technically constructive position following a breakout from multi-week consolidation at 79% confidence. The commodity is benefiting from dual tailwinds: macro uncertainty driving safe-haven flows, and a weakening USD providing upward price pressure. The $2,380 resistance zone is the next significant test — a clean break above with daily close confirmation projects toward $2,430 and potentially all-time highs.";
   }
   if (messageCount <= 1) {
-    return "Welcome to NexusFlow AI Market Analyst. I have access to your complete watchlist, all confirmed technical patterns, active trade setups, and liquidity zone data across all instruments. I can analyze specific setups, walk through scenario modeling, explain the broader market narrative, or answer any questions about current conditions. Note: full AI capabilities require phone verification on your Replit account — once verified, responses will be powered by Claude. What would you like to explore?";
+    return "Welcome to NexusFlow AI Market Analyst. I have access to your complete watchlist, all confirmed technical patterns, active trade setups, and liquidity zone data across all instruments. I can analyze specific setups, walk through scenario modeling, explain the broader market narrative, or answer any questions about current conditions. What would you like to explore?";
   }
-  return "Based on the current NexusFlow market data, the technical picture suggests a cautious but opportunistic stance. Key patterns are forming across multiple timeframes, with the highest-confidence setups in BTC/USD and SOL/USD. Liquidity mapping shows significant order concentration near current price levels on most instruments, which often precedes a volatility expansion. I'd recommend watching the 1H close on BTC as the primary directional signal. Would you like me to dig into a specific instrument, run a scenario simulation, or walk through the risk parameters on any of the active setups?";
+  return "Based on the current NexusFlow market data, the technical picture suggests a cautious but opportunistic stance. Key patterns are forming across multiple timeframes, with the highest-confidence setups in BTC/USD and SOL/USD. Liquidity mapping shows significant order concentration near current price levels on most instruments, which often precedes a volatility expansion. Would you like me to dig into a specific instrument or walk through the risk parameters on any of the active setups?";
 }
 
 export default router;

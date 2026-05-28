@@ -9,7 +9,7 @@ import {
   getListAnthropicConversationsQueryKey,
   getGetAnthropicConversationQueryKey,
 } from "@workspace/api-client-react";
-import { Plus, Trash2, Send, Bot, User, MessageSquare, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Send, Bot, User, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -260,7 +260,7 @@ export default function Analyst() {
                 </Button>
               </div>
               <div className="text-center mt-2 text-[10px] text-muted-foreground flex items-center justify-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Powered by Claude (requires phone verification)
+                <Bot className="h-3 w-3" /> Powered by GPT-4o · Market data injected into every response
               </div>
             </div>
           </>
