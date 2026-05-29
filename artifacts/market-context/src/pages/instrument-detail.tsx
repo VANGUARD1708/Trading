@@ -15,6 +15,7 @@ import { SentimentBadge } from "@/components/sentiment-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { CandlestickChart } from "@/components/candlestick-chart";
 import { PositionCalculator } from "@/components/position-calculator";
+import { AlertBell } from "@/components/alert-bell";
 import { useLivePrices } from "@/hooks/use-live-prices";
 import { motion } from "framer-motion";
 
@@ -91,18 +92,28 @@ export default function InstrumentDetail() {
 
       {/* ─── HUD Header ──────────────────────────────────── */}
       <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start gap-5">
+        <div className="flex items-start gap-5 flex-wrap">
           {isLoadingInstrument ? (
             <div className="space-y-2"><Skeleton className="h-10 w-40" /><Skeleton className="h-5 w-24" /></div>
           ) : (
             <>
               <div>
-                <div className="flex items-center gap-3 mb-0.5">
+                <div className="flex items-center gap-3 mb-0.5 flex-wrap">
                   <h1 className="text-3xl font-black font-mono tracking-wider text-foreground">{instrument?.symbol}</h1>
                   {instrument && <SentimentBadge sentiment={instrument.marketSentiment} />}
+                  {/* Alert bell for this instrument */}
+                  {instrument && (
+                    <AlertBell
+                      symbol={instrument.symbol}
+                      currentPrice={livePrice}
+                      size="md"
+                      className="ml-1"
+                    />
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">{instrument?.name}</p>
               </div>
+
               <div className="border-l border-border pl-5 pt-1">
                 {/* Live price with flash */}
                 <div
@@ -333,6 +344,19 @@ export default function InstrumentDetail() {
                   <div className="flex justify-between items-center mb-3">
                     <span className="text-[9px] font-mono text-muted-foreground">R:R 1:{setup.riskReward.toFixed(2)}</span>
                     <ConfidenceBar confidence={setup.confidence} />
+                  </div>
+                  {/* Set alert at TP1 quick action */}
+                  <div className="flex gap-1.5 mb-3">
+                    {setup.takeProfits?.slice(0, 2).map((tp: number, j: number) => (
+                      <AlertBell
+                        key={j}
+                        symbol={safeSymbol}
+                        currentPrice={livePrice}
+                        size="sm"
+                        className="text-[8px]"
+                      />
+                    )).slice(0, 1)}
+                    <span className="text-[9px] font-mono text-muted-foreground/50 flex items-center">Set alert at TP levels →</span>
                   </div>
                   {/* Position calculator embedded per setup */}
                   <PositionCalculator

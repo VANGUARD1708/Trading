@@ -10,6 +10,9 @@ import Analyst from "@/pages/analyst";
 import Simulator from "@/pages/simulator";
 import MarketMap from "@/pages/market-map";
 import NotFound from "@/pages/not-found";
+import { AlertProvider } from "@/contexts/alert-context";
+import { AlertNotifications } from "@/components/alert-notifications";
+import { CommandPalette } from "@/components/command-palette";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,7 +44,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <AlertProvider>
+            <Router />
+            <AlertNotifications />
+            <CommandPalette />
+          </AlertProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

@@ -4,6 +4,8 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ChevronRight, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useLivePrices } from "@/hooks/use-live-prices";
+import { Sparkline } from "@/components/sparkline";
+import { AlertBell } from "@/components/alert-bell";
 
 const SENTIMENT_COLOR: Record<string, string> = {
   strongly_bullish: "text-emerald-400", bullish: "text-green-400",
@@ -20,7 +22,6 @@ const SENTIMENT_BARS: Record<string, number> = {
 export default function Watchlist() {
   const { data: instruments, isLoading } = useListInstruments();
   const { prices, flashes } = useLivePrices(3000);
-  const maxVol = instruments ? Math.max(...instruments.map((i) => i.volume24h)) : 1;
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 pb-8 max-w-6xl mx-auto">
@@ -45,14 +46,14 @@ export default function Watchlist() {
 
       {/* Table */}
       <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
-        <div className="grid grid-cols-[2fr_2.5fr_2fr_1.5fr_1.5fr_2fr_1fr] gap-0 px-5 py-2.5 border-b border-border/60 text-[9px] font-mono font-bold tracking-[0.15em] text-muted-foreground/50 uppercase">
+        <div className="grid grid-cols-[2fr_2fr_100px_2fr_1.5fr_2fr_auto] gap-0 px-5 py-2.5 border-b border-border/60 text-[9px] font-mono font-bold tracking-[0.15em] text-muted-foreground/50 uppercase">
           <span>Symbol</span>
           <span>Name</span>
+          <span className="text-center">7D Trend</span>
           <span className="text-right">Live Price</span>
           <span className="text-right">24h Chg</span>
-          <span className="text-right">Volume</span>
           <span className="text-center">Sentiment</span>
-          <span />
+          <span className="text-right pr-2">Alert</span>
         </div>
 
         {isLoading ? (
@@ -71,7 +72,6 @@ export default function Watchlist() {
             const sentColor = SENTIMENT_COLOR[inst.marketSentiment] ?? "text-muted-foreground";
             const dotColor = SENTIMENT_DOT[inst.marketSentiment] ?? "bg-muted";
             const bars = SENTIMENT_BARS[inst.marketSentiment] ?? 3;
-            const volPct = (inst.volume24h / maxVol) * 100;
 
             return (
               <motion.div
@@ -80,33 +80,48 @@ export default function Watchlist() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Link href={`/instruments/${inst.symbol}`}>
-                  <div
-                    className="grid grid-cols-[2fr_2.5fr_2fr_1.5fr_1.5fr_2fr_1fr] gap-0 items-center px-5 py-3.5 border-b border-border/20 last:border-0 cursor-pointer group transition-all duration-150"
-                    style={{
-                      background:
-                        flash === "up" ? "hsla(142,71%,45%,0.05)" :
-                        flash === "down" ? "hsla(0,84%,60%,0.05)" :
-                        undefined,
-                      boxShadow:
-                        flash === "up" ? "inset 2px 0 0 hsla(142,71%,45%,0.8)" :
-                        flash === "down" ? "inset 2px 0 0 hsla(0,84%,60%,0.8)" :
-                        "inset 2px 0 0 transparent",
-                    }}
-                  >
-                    {/* Symbol */}
-                    <div className="flex items-center gap-2.5">
+                <div
+                  className="grid grid-cols-[2fr_2fr_100px_2fr_1.5fr_2fr_auto] gap-0 items-center px-5 py-3.5 border-b border-border/20 last:border-0 group transition-all duration-150"
+                  style={{
+                    background:
+                      flash === "up" ? "hsla(142,71%,45%,0.05)" :
+                      flash === "down" ? "hsla(0,84%,60%,0.05)" :
+                      undefined,
+                    boxShadow:
+                      flash === "up" ? "inset 2px 0 0 hsla(142,71%,45%,0.8)" :
+                      flash === "down" ? "inset 2px 0 0 hsla(0,84%,60%,0.8)" :
+                      "inset 2px 0 0 transparent",
+                  }}
+                >
+                  {/* Symbol — clickable */}
+                  <Link href={`/instruments/${inst.symbol}`}>
+                    <div className="flex items-center gap-2.5 cursor-pointer">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor} ${flash ? "status-pulse" : ""}`} />
                       <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">
                         {inst.symbol}
                       </span>
                     </div>
+                  </Link>
 
-                    {/* Name */}
-                    <span className="font-sans text-xs text-muted-foreground truncate pr-4">{inst.name}</span>
+                  {/* Name */}
+                  <Link href={`/instruments/${inst.symbol}`}>
+                    <span className="font-sans text-xs text-muted-foreground truncate pr-4 cursor-pointer hover:text-foreground transition-colors">{inst.name}</span>
+                  </Link>
 
-                    {/* Live price */}
-                    <div className="text-right">
+                  {/* Sparkline */}
+                  <div className="flex items-center justify-center">
+                    <Sparkline
+                      symbol={inst.symbol}
+                      currentPrice={price}
+                      changePct={changePct}
+                      width={80}
+                      height={28}
+                    />
+                  </div>
+
+                  {/* Live price */}
+                  <Link href={`/instruments/${inst.symbol}`}>
+                    <div className="text-right cursor-pointer">
                       <span
                         className="font-mono text-sm tabular-nums transition-all duration-150"
                         style={{
@@ -125,37 +140,37 @@ export default function Watchlist() {
                         </span>
                       )}
                     </div>
+                  </Link>
 
-                    {/* 24h change */}
-                    <div className={`flex items-center justify-end gap-1 font-mono text-sm tabular-nums ${isUp ? "text-emerald-400" : "text-red-400"}`}>
+                  {/* 24h change */}
+                  <Link href={`/instruments/${inst.symbol}`}>
+                    <div className={`flex items-center justify-end gap-1 font-mono text-sm tabular-nums cursor-pointer ${isUp ? "text-emerald-400" : "text-red-400"}`}>
                       {isUp ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                       {Math.abs(changePct).toFixed(2)}%
                     </div>
+                  </Link>
 
-                    {/* Volume bar */}
-                    <div className="flex items-center justify-end gap-2 pr-2">
-                      <div className="w-16 h-1 bg-muted/50 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary/50 rounded-full transition-all duration-700" style={{ width: `${volPct}%` }} />
-                      </div>
-                    </div>
-
-                    {/* Sentiment bars */}
-                    <div className="flex items-center justify-center gap-0.5">
+                  {/* Sentiment */}
+                  <Link href={`/instruments/${inst.symbol}`}>
+                    <div className="flex items-center justify-center gap-0.5 cursor-pointer">
                       {Array.from({ length: 5 }).map((_, j) => (
                         <div key={j} className={`rounded-full transition-all ${j < bars ? dotColor : "bg-muted/40"}`}
                           style={{ width: 6, height: 6 + j * 2 }} />
                       ))}
-                      <span className={`ml-2 text-[9px] font-mono capitalize ${sentColor}`}>
+                      <span className={`ml-2 text-[9px] font-mono capitalize hidden xl:block ${sentColor}`}>
                         {inst.marketSentiment.replace(/_/g, " ")}
                       </span>
                     </div>
+                  </Link>
 
-                    {/* Arrow */}
-                    <div className="flex justify-end">
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                    </div>
+                  {/* Alert bell + arrow */}
+                  <div className="flex items-center justify-end gap-1 pl-3">
+                    <AlertBell symbol={inst.symbol} currentPrice={price} size="sm" />
+                    <Link href={`/instruments/${inst.symbol}`}>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors cursor-pointer" />
+                    </Link>
                   </div>
-                </Link>
+                </div>
               </motion.div>
             );
           })

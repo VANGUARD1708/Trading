@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, List, Activity, Settings, Bot, FlaskConical, Globe, Wifi, ChevronRight } from "lucide-react";
+import {
+  LayoutDashboard, List, Activity, Settings, Bot, FlaskConical,
+  Globe, Wifi, ChevronRight, Bell, Command,
+} from "lucide-react";
 import { TickerTape } from "@/components/ticker-tape";
+import { useAlerts } from "@/contexts/alert-context";
 
 const navItems = [
   { href: "/",           label: "Command Center", icon: LayoutDashboard },
@@ -24,8 +28,32 @@ function UtcClock() {
   );
 }
 
+function AlertCountBadge() {
+  const { activeCount, alerts } = useAlerts();
+  if (alerts.length === 0) return null;
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-yellow-500/8 border border-yellow-500/20">
+      <Bell className={`h-3 w-3 ${activeCount > 0 ? "text-yellow-400" : "text-muted-foreground/40"}`}
+        style={activeCount > 0 ? { filter: "drop-shadow(0 0 4px hsl(45,100%,55%))" } : undefined} />
+      <span className="text-[9px] font-mono text-yellow-400/80 flex-1 tracking-widest">
+        {activeCount > 0 ? `${activeCount} ALERT${activeCount > 1 ? "S" : ""} ACTIVE` : "NO ACTIVE ALERTS"}
+      </span>
+      {activeCount > 0 && (
+        <span className="w-4 h-4 rounded-full bg-yellow-400 text-black font-black text-[8px] flex items-center justify-center">
+          {activeCount > 9 ? "9+" : activeCount}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+
+  function openCommandPalette() {
+    const ev = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
+    window.dispatchEvent(ev);
+  }
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-background text-foreground bg-grid">
@@ -59,8 +87,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
+          {/* Command palette trigger */}
+          <button
+            onClick={openCommandPalette}
+            className="mx-3 mt-3 flex items-center gap-2 px-3 py-2 rounded-sm border border-border/50 bg-muted/20 text-muted-foreground hover:border-primary/30 hover:text-primary transition-all group"
+          >
+            <Command className="h-3 w-3 group-hover:text-primary transition-colors" />
+            <span className="text-[10px] font-mono flex-1 text-left tracking-wider">Command line...</span>
+            <div className="flex items-center gap-0.5">
+              <kbd className="text-[8px] bg-muted/60 border border-border/60 px-1 py-0.5 rounded font-mono">⌘</kbd>
+              <kbd className="text-[8px] bg-muted/60 border border-border/60 px-1 py-0.5 rounded font-mono">K</kbd>
+            </div>
+          </button>
+
           {/* Nav */}
-          <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-hide">
+          <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto scrollbar-hide">
             {navItems.map((item) => {
               const isActive = location === item.href;
               return (
@@ -86,6 +127,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* System readout */}
           <div className="p-3 border-t border-border/60 space-y-2">
+            <AlertCountBadge />
+
             <div className="flex items-center justify-between text-[9px] font-mono text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Wifi className="h-2.5 w-2.5 text-emerald-400" /> FEED ONLINE
