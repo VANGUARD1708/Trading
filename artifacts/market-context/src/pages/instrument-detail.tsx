@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams } from "wouter";
-import { 
-  useGetInstrument, 
-  useGetCandles, 
-  useGetPatterns, 
+import {
+  useGetInstrument,
+  useGetCandles,
+  useGetPatterns,
   useGetForecast,
   useGetNarrative,
   useGetTradeSetups,
@@ -16,32 +16,64 @@ import {
   getGetForecastQueryKey,
   getGetNarrativeQueryKey,
   getGetTradeSetupsQueryKey,
-  getGetLiquidityZonesQueryKey
+  getGetLiquidityZonesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Zap, TrendingUp, AlertTriangle } from "lucide-react";
+import { RefreshCw, Zap, TrendingUp, TrendingDown, AlertTriangle, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { SentimentBadge } from "@/components/sentiment-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
+import { CandlestickChart } from "@/components/candlestick-chart";
+import { motion } from "framer-motion";
+
+const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
+type TF = (typeof TIMEFRAMES)[number];
+
+const ZONE_COLOR: Record<string, string> = {
+  support:        "text-emerald-400",
+  resistance:     "text-red-400",
+  order_block:    "text-yellow-400",
+  fair_value_gap: "text-blue-400",
+  liquidity_pool: "text-primary",
+};
+const ZONE_BG: Record<string, string> = {
+  support:        "bg-emerald-500/10 border-emerald-500/20",
+  resistance:     "bg-red-500/10 border-red-500/20",
+  order_block:    "bg-yellow-500/10 border-yellow-500/20",
+  fair_value_gap: "bg-blue-500/10 border-blue-500/20",
+  liquidity_pool: "bg-primary/10 border-primary/20",
+};
 
 export default function InstrumentDetail() {
   const { symbol } = useParams();
-  const [timeframe, setTimeframe] = useState<"1m"|"5m"|"15m"|"1h"|"4h"|"1d">("1h");
+  const [timeframe, setTimeframe] = useState<TF>("1h");
   const queryClient = useQueryClient();
-
   const safeSymbol = symbol || "";
 
-  const { data: instrument, isLoading: isLoadingInstrument } = useGetInstrument(safeSymbol, { query: { enabled: !!safeSymbol, queryKey: getGetInstrumentQueryKey(safeSymbol) }});
-  const { data: candles, isLoading: isLoadingCandles } = useGetCandles(safeSymbol, timeframe, { query: { enabled: !!safeSymbol, queryKey: getGetCandlesQueryKey(safeSymbol, timeframe) }});
-  const { data: patterns } = useGetPatterns(safeSymbol, timeframe, { query: { enabled: !!safeSymbol, queryKey: getGetPatternsQueryKey(safeSymbol, timeframe) }});
-  const { data: forecast } = useGetForecast(safeSymbol, timeframe, { query: { enabled: !!safeSymbol, queryKey: getGetForecastQueryKey(safeSymbol, timeframe) }});
-  const { data: narrative } = useGetNarrative(safeSymbol, timeframe, { query: { enabled: !!safeSymbol, queryKey: getGetNarrativeQueryKey(safeSymbol, timeframe) }});
-  const { data: setups } = useGetTradeSetups(safeSymbol, timeframe, { query: { enabled: !!safeSymbol, queryKey: getGetTradeSetupsQueryKey(safeSymbol, timeframe) }});
-  const { data: zones } = useGetLiquidityZones(safeSymbol, timeframe, { query: { enabled: !!safeSymbol, queryKey: getGetLiquidityZonesQueryKey(safeSymbol, timeframe) }});
+  const { data: instrument, isLoading: isLoadingInstrument } = useGetInstrument(safeSymbol, {
+    query: { enabled: !!safeSymbol, queryKey: getGetInstrumentQueryKey(safeSymbol) },
+  });
+  const { data: candles, isLoading: isLoadingCandles } = useGetCandles(safeSymbol, timeframe, {
+    query: { enabled: !!safeSymbol, queryKey: getGetCandlesQueryKey(safeSymbol, timeframe) },
+  });
+  const { data: patterns } = useGetPatterns(safeSymbol, timeframe, {
+    query: { enabled: !!safeSymbol, queryKey: getGetPatternsQueryKey(safeSymbol, timeframe) },
+  });
+  const { data: forecast } = useGetForecast(safeSymbol, timeframe, {
+    query: { enabled: !!safeSymbol, queryKey: getGetForecastQueryKey(safeSymbol, timeframe) },
+  });
+  const { data: narrative } = useGetNarrative(safeSymbol, timeframe, {
+    query: { enabled: !!safeSymbol, queryKey: getGetNarrativeQueryKey(safeSymbol, timeframe) },
+  });
+  const { data: setups } = useGetTradeSetups(safeSymbol, timeframe, {
+    query: { enabled: !!safeSymbol, queryKey: getGetTradeSetupsQueryKey(safeSymbol, timeframe) },
+  });
+  const { data: zones } = useGetLiquidityZones(safeSymbol, timeframe, {
+    query: { enabled: !!safeSymbol, queryKey: getGetLiquidityZonesQueryKey(safeSymbol, timeframe) },
+  });
 
   const runAnalysis = useRunAnalysis();
   const generateNarrative = useGenerateNarrative();
@@ -52,7 +84,7 @@ export default function InstrumentDetail() {
         queryClient.invalidateQueries({ queryKey: getGetPatternsQueryKey(safeSymbol, timeframe) });
         queryClient.invalidateQueries({ queryKey: getGetLiquidityZonesQueryKey(safeSymbol, timeframe) });
         queryClient.invalidateQueries({ queryKey: getGetTradeSetupsQueryKey(safeSymbol, timeframe) });
-      }
+      },
     });
   };
 
@@ -60,235 +92,355 @@ export default function InstrumentDetail() {
     generateNarrative.mutate({ data: { timeframe }, symbol: safeSymbol }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetNarrativeQueryKey(safeSymbol, timeframe) });
-      }
+      },
     });
   };
 
   if (!safeSymbol) return null;
 
+  const isUp = (instrument?.priceChangePct24h ?? 0) >= 0;
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          {isLoadingInstrument ? <Skeleton className="h-10 w-48 mb-2" /> : (
-            <div className="flex items-center gap-4 mb-1">
-              <h1 className="text-4xl font-bold tracking-tight">{instrument?.symbol}</h1>
-              {instrument && <SentimentBadge sentiment={instrument.marketSentiment} />}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-7xl mx-auto space-y-5 pb-10"
+    >
+      {/* ─── HUD Header ─────────────────────────────────────── */}
+      <div className="rounded-sm border border-border bg-card/40 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-5">
+          {isLoadingInstrument ? (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-40" />
+              <Skeleton className="h-5 w-24" />
             </div>
-          )}
-          {isLoadingInstrument ? <Skeleton className="h-5 w-32" /> : (
-            <p className="text-muted-foreground">{instrument?.name}</p>
+          ) : (
+            <>
+              <div>
+                <div className="flex items-center gap-3 mb-0.5">
+                  <h1 className="text-3xl font-black font-mono tracking-wider text-foreground">{instrument?.symbol}</h1>
+                  {instrument && <SentimentBadge sentiment={instrument.marketSentiment} />}
+                </div>
+                <p className="text-xs text-muted-foreground">{instrument?.name}</p>
+              </div>
+              <div className="border-l border-border pl-5 pt-1">
+                <div className="font-mono text-3xl font-bold text-primary glow-text-primary tabular-nums">
+                  ${instrument?.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </div>
+                <div className={`flex items-center gap-1 text-sm font-mono mt-0.5 ${isUp ? "text-emerald-400" : "text-red-400"}`}>
+                  {isUp ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {isUp ? "+" : ""}{instrument?.priceChangePct24h.toFixed(2)}% 24H
+                </div>
+              </div>
+            </>
           )}
         </div>
 
         <div className="flex items-center gap-3">
-          <Select value={timeframe} onValueChange={(v: any) => setTimeframe(v)}>
-            <SelectTrigger className="w-[120px] bg-card">
-              <SelectValue placeholder="Timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1m">1 Minute</SelectItem>
-              <SelectItem value="5m">5 Minutes</SelectItem>
-              <SelectItem value="15m">15 Minutes</SelectItem>
-              <SelectItem value="1h">1 Hour</SelectItem>
-              <SelectItem value="4h">4 Hours</SelectItem>
-              <SelectItem value="1d">1 Day</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" size="sm" onClick={handleRefreshAnalysis} disabled={runAnalysis.isPending}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${runAnalysis.isPending ? 'animate-spin' : ''}`} />
-            Refresh
+          <div className="flex gap-1 bg-muted/40 p-1 rounded-sm">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`px-2.5 py-1 text-[10px] font-mono font-bold rounded-sm tracking-widest transition-all ${
+                  timeframe === tf
+                    ? "bg-primary/20 text-primary border border-primary/30 glow-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tf.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshAnalysis}
+            disabled={runAnalysis.isPending}
+            className="font-mono text-[10px] tracking-widest border-primary/30 text-primary hover:bg-primary/10"
+          >
+            <RefreshCw className={`w-3 h-3 mr-1.5 ${runAnalysis.isPending ? "animate-spin" : ""}`} />
+            ANALYZE
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Main Chart Area */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-card/50 backdrop-blur border-border overflow-hidden">
-            <CardHeader className="pb-2 border-b border-border/50">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                <span>PRICE ACTION & LIQUIDITY</span>
-                {instrument && <span className="font-mono text-foreground">${instrument.currentPrice.toLocaleString()}</span>}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 h-[400px]">
-              {isLoadingCandles ? (
-                <div className="h-full flex items-center justify-center"><Skeleton className="h-[90%] w-[95%]" /></div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={candles} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(175, 100%, 50%)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(175, 100%, 50%)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="timestamp" hide />
-                    <YAxis domain={['auto', 'auto']} hide />
-                    <RechartsTooltip 
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      labelFormatter={() => ''}
-                    />
-                    <Area type="monotone" dataKey="close" stroke="hsl(175, 100%, 50%)" fillOpacity={1} fill="url(#colorClose)" />
-                    {zones?.map((zone) => (
-                      <ReferenceLine 
-                        key={zone.id} 
-                        y={zone.priceLevel} 
-                        stroke={zone.zoneType === 'support' ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'} 
-                        strokeOpacity={0.5}
-                        strokeDasharray="3 3" 
-                      />
-                    ))}
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+      {/* ─── Chart + sidebar ──────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-          {/* Narrative Story */}
-          <Card className="bg-card/50 backdrop-blur">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" /> Market Narrative
-              </CardTitle>
-              <Button variant="ghost" size="sm" onClick={handleRegenerateNarrative} disabled={generateNarrative.isPending}>
-                <RefreshCw className={`w-3 h-3 mr-2 ${generateNarrative.isPending ? 'animate-spin' : ''}`} />
-                Regenerate
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {!narrative ? <Skeleton className="h-32" /> : (
-                <div className="space-y-4">
-                  <h3 className="font-bold text-lg">{narrative.headline}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{narrative.summary}</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-md">
-                      <h4 className="text-emerald-400 font-bold text-xs uppercase mb-2">Bullish Case</h4>
-                      <p className="text-sm text-muted-foreground">{narrative.bullishCase}</p>
-                    </div>
-                    <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-md">
-                      <h4 className="text-red-400 font-bold text-xs uppercase mb-2">Bearish Case</h4>
-                      <p className="text-sm text-muted-foreground">{narrative.bearishCase}</p>
-                    </div>
+        {/* Chart column */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Candlestick chart */}
+          <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary status-pulse" />
+                <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                  Price Action · {timeframe.toUpperCase()} · Liquidity Overlay
+                </span>
+              </div>
+              <span className="font-mono text-xs text-muted-foreground">{candles?.length ?? 0} candles</span>
+            </div>
+            <div className="p-2">
+              {isLoadingCandles ? (
+                <div className="h-[380px] flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    <span className="text-[10px] font-mono text-muted-foreground tracking-widest animate-pulse">
+                      LOADING MARKET DATA...
+                    </span>
                   </div>
                 </div>
+              ) : candles && candles.length > 0 ? (
+                <CandlestickChart candles={candles} zones={zones ?? []} height={380} />
+              ) : (
+                <div className="h-[380px] flex items-center justify-center text-muted-foreground text-sm">
+                  No candle data available for this timeframe.
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Zone legend */}
+            {zones && zones.length > 0 && (
+              <div className="px-4 pb-3 flex flex-wrap gap-2">
+                {["support", "resistance", "order_block", "fair_value_gap", "liquidity_pool"]
+                  .filter((t) => zones.some((z) => z.zoneType === t))
+                  .map((t) => (
+                    <span
+                      key={t}
+                      className={`text-[9px] font-mono px-2 py-0.5 rounded-sm border ${ZONE_BG[t]} ${ZONE_COLOR[t]}`}
+                    >
+                      {t.replace(/_/g, " ")}
+                    </span>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Market narrative */}
+          <div className="rounded-sm border border-border bg-card/40">
+            <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Market Narrative</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRegenerateNarrative}
+                disabled={generateNarrative.isPending}
+                className="text-[9px] font-mono text-muted-foreground hover:text-primary h-6 px-2 tracking-widest"
+              >
+                <RefreshCw className={`w-2.5 h-2.5 mr-1 ${generateNarrative.isPending ? "animate-spin" : ""}`} />
+                REGENERATE
+              </Button>
+            </div>
+            <div className="p-4">
+              {!narrative ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-base text-foreground leading-snug">{narrative.headline}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{narrative.summary}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-emerald-500/8 border border-emerald-500/20 p-3 rounded-sm">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingUp className="h-3 w-3 text-emerald-400" />
+                        <span className="text-emerald-400 font-bold text-[9px] uppercase tracking-widest">Bull Case</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{narrative.bullishCase}</p>
+                    </div>
+                    <div className="bg-red-500/8 border border-red-500/20 p-3 rounded-sm">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingDown className="h-3 w-3 text-red-400" />
+                        <span className="text-red-400 font-bold text-[9px] uppercase tracking-widest">Bear Case</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{narrative.bearishCase}</p>
+                    </div>
+                  </div>
+                  {narrative.riskFactors && narrative.riskFactors.length > 0 && (
+                    <div className="pt-2 border-t border-border/50">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <AlertTriangle className="h-3 w-3 text-orange-400" />
+                        <span className="text-[9px] font-bold tracking-widest text-orange-400 uppercase">Risk Factors</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {narrative.riskFactors.map((r: string, i: number) => (
+                          <span key={i} className="text-[10px] px-2 py-0.5 rounded-sm bg-orange-500/10 border border-orange-500/20 text-orange-300">
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Sidebar Data Area */}
-        <div className="space-y-6">
-          
-          {/* Probabilistic Forecast */}
-          <Card className="bg-card/50 backdrop-blur">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase">Forecast ({timeframe})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!forecast ? <Skeleton className="h-24" /> : (
+        {/* ─── Right sidebar ────────────────────────────────── */}
+        <div className="space-y-5">
+
+          {/* Probabilistic forecast */}
+          <div className="rounded-sm border border-border bg-card/40">
+            <div className="px-4 py-2.5 border-b border-border/60">
+              <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                Forecast · {timeframe.toUpperCase()}
+              </span>
+            </div>
+            <div className="p-4">
+              {!forecast ? (
+                <Skeleton className="h-32" />
+              ) : (
                 <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-emerald-400">Bullish</span>
-                      <span className="font-mono">{Math.round(forecast.bullishProbability * 100)}%</span>
+                  {[
+                    { label: "Bullish", value: forecast.bullishProbability, color: "#10b981", target: forecast.bullishTarget },
+                    { label: "Bearish", value: forecast.bearishProbability, color: "#ef4444", target: forecast.bearishTarget },
+                  ].map(({ label, value, color, target }) => (
+                    <div key={label}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-mono font-bold tracking-widest" style={{ color }}>
+                          {label.toUpperCase()}
+                        </span>
+                        <div className="text-right">
+                          <span className="font-mono text-sm font-bold" style={{ color }}>{Math.round(value * 100)}%</span>
+                          <span className="text-[9px] font-mono text-muted-foreground ml-2">
+                            ${target?.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${value * 100}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${forecast.bullishProbability * 100}%` }} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-red-400">Bearish</span>
-                      <span className="font-mono">{Math.round(forecast.bearishProbability * 100)}%</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-red-500" style={{ width: `${forecast.bearishProbability * 100}%` }} />
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t border-border mt-2">
-                    <div className="text-xs text-muted-foreground mb-2 uppercase">Key Drivers</div>
-                    <ul className="text-xs space-y-1 text-muted-foreground">
-                      {forecast.keyDrivers.map((driver, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-primary mt-0.5">•</span>
-                          {driver}
+                  ))}
+                  <div className="pt-2 border-t border-border/50">
+                    <div className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-2">Key Drivers</div>
+                    <ul className="space-y-1.5">
+                      {forecast.keyDrivers.map((d: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-[10px] text-muted-foreground">
+                          <ArrowRight className="h-2.5 w-2.5 text-primary mt-0.5 shrink-0" />
+                          {d}
                         </li>
                       ))}
                     </ul>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Trade Setups */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" /> Active Setups
-            </h3>
-            {!setups ? (
-              <Skeleton className="h-32" />
-            ) : setups.length === 0 ? (
-              <div className="p-4 bg-muted/50 rounded-md text-center text-sm text-muted-foreground">No active setups for this timeframe.</div>
-            ) : setups.map((setup) => (
-              <Card key={setup.id} className="bg-card/50 backdrop-blur border-l-4 border-l-primary">
-                <CardContent className="p-4">
+          {/* Active trade setups */}
+          <div className="rounded-sm border border-border bg-card/40">
+            <div className="px-4 py-2.5 border-b border-border/60 flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Active Setups</span>
+              <span className="ml-auto text-[9px] font-mono text-muted-foreground/50">{setups?.length ?? 0}</span>
+            </div>
+            <div className="p-3 space-y-2">
+              {!setups ? (
+                <Skeleton className="h-28" />
+              ) : setups.length === 0 ? (
+                <div className="py-6 text-center text-[10px] font-mono text-muted-foreground/50 tracking-widest">
+                  NO ACTIVE SETUPS
+                </div>
+              ) : setups.map((setup, i) => (
+                <motion.div
+                  key={setup.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.07 }}
+                  className={`p-3 rounded-sm border ${
+                    setup.direction === "long"
+                      ? "border-emerald-500/25 bg-emerald-500/5"
+                      : "border-red-500/25 bg-red-500/5"
+                  }`}
+                >
                   <div className="flex justify-between items-start mb-2">
-                    <div className="font-bold">{setup.setupType}</div>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm ${setup.direction === 'long' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                    <span className="text-xs font-bold text-foreground">{setup.setupType}</span>
+                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-sm ${
+                      setup.direction === "long"
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "bg-red-500/20 text-red-400"
+                    }`}>
                       {setup.direction.toUpperCase()}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-3 font-mono">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono mb-2">
                     <div>
-                      <div className="text-muted-foreground mb-0.5">ENTRY</div>
-                      <div>${setup.entryPrice}</div>
+                      <div className="text-muted-foreground/60">ENTRY</div>
+                      <div className="text-foreground">${setup.entryPrice.toLocaleString()}</div>
                     </div>
                     <div>
-                      <div className="text-muted-foreground mb-0.5">STOP</div>
-                      <div className="text-red-400">${setup.stopLoss}</div>
+                      <div className="text-muted-foreground/60">STOP</div>
+                      <div className="text-red-400">${setup.stopLoss.toLocaleString()}</div>
                     </div>
+                    {setup.takeProfits?.slice(0, 2).map((tp: number, j: number) => (
+                      <div key={j}>
+                        <div className="text-muted-foreground/60">TP{j + 1}</div>
+                        <div className="text-emerald-400">${tp.toLocaleString()}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-muted-foreground">R:R 1:{setup.riskReward}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-mono text-muted-foreground">R:R 1:{setup.riskReward.toFixed(2)}</span>
                     <ConfidenceBar confidence={setup.confidence} />
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
 
-          {/* Patterns */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-primary" /> Detected Patterns
-            </h3>
-            {!patterns ? (
-              <Skeleton className="h-24" />
-            ) : patterns.length === 0 ? (
-               <div className="p-4 bg-muted/50 rounded-md text-center text-sm text-muted-foreground">No patterns detected.</div>
-            ) : patterns.map((pattern) => (
-              <div key={pattern.id} className="p-3 bg-card/50 backdrop-blur rounded-md border border-border flex justify-between items-center">
-                <div>
-                  <div className="font-medium text-sm">{pattern.patternType}</div>
-                  <div className="text-xs text-muted-foreground">{pattern.status} • ${pattern.priceLevel}</div>
+          {/* Detected patterns */}
+          <div className="rounded-sm border border-border bg-card/40">
+            <div className="px-4 py-2.5 border-b border-border/60 flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">Patterns</span>
+              <span className="ml-auto text-[9px] font-mono text-muted-foreground/50">{patterns?.length ?? 0}</span>
+            </div>
+            <div className="p-3 space-y-1.5">
+              {!patterns ? (
+                <Skeleton className="h-20" />
+              ) : patterns.length === 0 ? (
+                <div className="py-4 text-center text-[10px] font-mono text-muted-foreground/50 tracking-widest">
+                  NO PATTERNS DETECTED
                 </div>
-                <div className="w-24">
-                  <ConfidenceBar confidence={pattern.confidence} />
+              ) : patterns.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-2 rounded-sm bg-muted/20 border border-border/30 hover:border-primary/20 transition-colors"
+                >
+                  <div>
+                    <div className="text-xs font-medium text-foreground">{p.patternType}</div>
+                    <div className="text-[9px] font-mono text-muted-foreground mt-0.5">
+                      <span className={p.direction === "bullish" ? "text-emerald-400" : "text-red-400"}>
+                        {p.direction.toUpperCase()}
+                      </span>
+                      {" · "}{p.status}{" · "}
+                      <span className="text-primary">${p.priceLevel.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="w-20 shrink-0">
+                    <ConfidenceBar confidence={p.confidence} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

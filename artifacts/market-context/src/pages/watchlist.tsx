@@ -1,61 +1,171 @@
 import { useListInstruments } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { SentimentBadge } from "@/components/sentiment-badge";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ChevronRight, ArrowUpRight, ArrowDownRight, Circle } from "lucide-react";
+
+const SENTIMENT_COLOR: Record<string, string> = {
+  strongly_bullish: "text-emerald-400",
+  bullish:          "text-green-400",
+  neutral:          "text-yellow-400",
+  bearish:          "text-orange-400",
+  strongly_bearish: "text-red-400",
+};
+
+const SENTIMENT_DOT: Record<string, string> = {
+  strongly_bullish: "bg-emerald-400",
+  bullish:          "bg-green-400",
+  neutral:          "bg-yellow-400",
+  bearish:          "bg-orange-400",
+  strongly_bearish: "bg-red-400",
+};
+
+const SENTIMENT_BARS: Record<string, number> = {
+  strongly_bullish: 5, bullish: 4, neutral: 3, bearish: 2, strongly_bearish: 1,
+};
 
 export default function Watchlist() {
   const { data: instruments, isLoading } = useListInstruments();
 
+  const maxVol = instruments ? Math.max(...instruments.map((i) => i.volume24h)) : 1;
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Watchlist</h1>
-        <p className="text-muted-foreground">Monitored assets and current sentiment.</p>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-5 pb-8 max-w-6xl mx-auto"
+    >
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1
+            className="text-2xl font-black tracking-[0.15em] text-primary glow-text-primary glitch-text"
+            data-text="ASSET MONITOR"
+          >
+            ASSET MONITOR
+          </h1>
+          <p className="text-[10px] font-mono text-muted-foreground tracking-wider mt-0.5">
+            TRACKING {instruments?.length ?? "—"} INSTRUMENTS · LIVE SENTIMENT FEED
+          </p>
+        </div>
+        <div className="text-[9px] font-mono text-muted-foreground/50 text-right space-y-0.5">
+          <div className="flex items-center gap-1">
+            <span className="w-1 h-1 rounded-full bg-emerald-400 status-pulse" />
+            FEED ACTIVE
+          </div>
+          <div>LAST SYNC: NOW</div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Table */}
+      <div className="rounded-sm border border-border bg-card/40 overflow-hidden">
+        {/* Column headers */}
+        <div className="grid grid-cols-[2fr_2.5fr_2fr_1.5fr_1.5fr_2fr_1fr] gap-0 px-5 py-2.5 border-b border-border/60 text-[9px] font-mono font-bold tracking-[0.15em] text-muted-foreground/50 uppercase">
+          <span>Symbol</span>
+          <span>Name</span>
+          <span className="text-right">Price</span>
+          <span className="text-right">24h Chg</span>
+          <span className="text-right">Volume</span>
+          <span className="text-center">Sentiment</span>
+          <span />
+        </div>
+
+        {/* Rows */}
         {isLoading ? (
-          Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)
-        ) : instruments?.map((instrument, index) => {
-          const isPositive = instrument.priceChangePct24h >= 0;
-          return (
-            <motion.div
-              key={instrument.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Link href={`/instruments/${instrument.symbol}`}>
-                <Card className="hover:border-primary/50 cursor-pointer transition-colors bg-card/50 backdrop-blur group">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{instrument.symbol}</h3>
-                        <p className="text-sm text-muted-foreground">{instrument.name}</p>
-                      </div>
-                      <SentimentBadge sentiment={instrument.marketSentiment} />
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="px-5 py-4 border-b border-border/20">
+              <Skeleton className="h-5 w-full" />
+            </div>
+          ))
+        ) : (
+          instruments?.map((inst, i) => {
+            const isUp = inst.priceChangePct24h >= 0;
+            const sentColor = SENTIMENT_COLOR[inst.marketSentiment] ?? "text-muted-foreground";
+            const dotColor = SENTIMENT_DOT[inst.marketSentiment] ?? "bg-muted";
+            const bars = SENTIMENT_BARS[inst.marketSentiment] ?? 3;
+            const volPct = (inst.volume24h / maxVol) * 100;
+
+            return (
+              <motion.div
+                key={inst.id}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <Link href={`/instruments/${inst.symbol}`}>
+                  <div className="grid grid-cols-[2fr_2.5fr_2fr_1.5fr_1.5fr_2fr_1fr] gap-0 items-center px-5 py-3.5 border-b border-border/20 last:border-0 data-row cursor-pointer group">
+
+                    {/* Symbol + active dot */}
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+                      <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                        {inst.symbol}
+                      </span>
                     </div>
-                    
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-1">Price</div>
-                        <div className="font-mono text-lg">${instrument.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</div>
-                      </div>
-                      <div className={`flex items-center gap-1 font-mono text-sm ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                        {Math.abs(instrument.priceChangePct24h).toFixed(2)}%
+
+                    {/* Name */}
+                    <span className="font-sans text-xs text-muted-foreground truncate pr-4">{inst.name}</span>
+
+                    {/* Price */}
+                    <span className="font-mono text-sm text-right text-foreground tabular-nums">
+                      ${inst.currentPrice.toLocaleString(undefined, {
+                        minimumFractionDigits: inst.currentPrice < 1 ? 4 : 2,
+                        maximumFractionDigits: inst.currentPrice < 1 ? 6 : 2,
+                      })}
+                    </span>
+
+                    {/* 24h change */}
+                    <div className={`flex items-center justify-end gap-1 font-mono text-sm tabular-nums ${isUp ? "text-emerald-400" : "text-red-400"}`}>
+                      {isUp
+                        ? <ArrowUpRight className="h-3.5 w-3.5" />
+                        : <ArrowDownRight className="h-3.5 w-3.5" />}
+                      {Math.abs(inst.priceChangePct24h).toFixed(2)}%
+                    </div>
+
+                    {/* Volume bar */}
+                    <div className="flex items-center justify-end gap-2 pr-2">
+                      <div className="w-16 h-1 bg-muted/50 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary/50 rounded-full transition-all duration-700"
+                          style={{ width: `${volPct}%` }}
+                        />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          );
-        })}
+
+                    {/* Sentiment bars */}
+                    <div className="flex items-center justify-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <div
+                          key={j}
+                          className={`rounded-full transition-all ${j < bars ? dotColor : "bg-muted/40"}`}
+                          style={{ width: 6, height: 6 + j * 2 }}
+                        />
+                      ))}
+                      <span className={`ml-2 text-[9px] font-mono capitalize ${sentColor}`}>
+                        {inst.marketSentiment.replace(/_/g, " ")}
+                      </span>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex justify-end">
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })
+        )}
       </div>
-    </div>
+
+      {/* Footer status */}
+      <div className="flex items-center justify-between text-[9px] font-mono text-muted-foreground/40 px-1">
+        <span>NEXUSFLOW ASSET MONITOR · REAL-TIME DATA</span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1 h-1 rounded-full bg-emerald-400 status-pulse" />
+          STREAMING
+        </span>
+      </div>
+    </motion.div>
   );
 }

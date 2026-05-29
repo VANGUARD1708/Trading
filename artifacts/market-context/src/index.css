@@ -52,46 +52,50 @@
 }
 
 :root {
-  /* Force dark mode base aesthetics */
-  --background: 224 71% 4%;
-  --foreground: 213 31% 91%;
-  
-  --card: 224 71% 4%;
-  --card-foreground: 213 31% 91%;
-  --card-border: 216 34% 17%;
-  
-  --popover: 224 71% 4%;
-  --popover-foreground: 213 31% 91%;
-  --popover-border: 216 34% 17%;
-  
-  --primary: 175 100% 50%; /* Neon Cyan */
-  --primary-foreground: 224 71% 4%;
-  
-  --secondary: 215 25% 27%;
+  --background: 222 84% 3%;
+  --foreground: 210 40% 92%;
+
+  --card: 222 60% 5%;
+  --card-foreground: 210 40% 92%;
+  --card-border: 216 34% 14%;
+
+  --popover: 222 60% 5%;
+  --popover-foreground: 210 40% 92%;
+  --popover-border: 216 34% 14%;
+
+  --primary: 175 100% 50%;
+  --primary-foreground: 222 84% 3%;
+
+  --secondary: 215 25% 20%;
   --secondary-foreground: 210 40% 98%;
-  
-  --muted: 216 34% 17%;
-  --muted-foreground: 215 20% 65%;
-  
+
+  --muted: 216 34% 12%;
+  --muted-foreground: 215 20% 55%;
+
   --accent: 175 100% 50%;
-  --accent-foreground: 224 71% 4%;
-  
+  --accent-foreground: 222 84% 3%;
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
-  
-  --border: 216 34% 17%;
-  --input: 216 34% 17%;
+
+  --border: 216 34% 13%;
+  --input: 216 34% 13%;
   --ring: 175 100% 50%;
-  
-  --sidebar: 224 71% 4%;
-  --sidebar-foreground: 213 31% 91%;
-  --sidebar-border: 216 34% 17%;
+
+  --sidebar: 222 84% 3%;
+  --sidebar-foreground: 210 40% 92%;
+  --sidebar-border: 216 34% 13%;
   --sidebar-primary: 175 100% 50%;
-  --sidebar-primary-foreground: 224 71% 4%;
-  --sidebar-accent: 216 34% 17%;
-  --sidebar-accent-foreground: 213 31% 91%;
+  --sidebar-primary-foreground: 222 84% 3%;
+  --sidebar-accent: 216 34% 12%;
+  --sidebar-accent-foreground: 210 40% 92%;
 
   --radius: 0.25rem;
+
+  --neon-cyan: hsla(175, 100%, 50%, 1);
+  --neon-cyan-dim: hsla(175, 100%, 50%, 0.15);
+  --neon-green: hsla(142, 71%, 45%, 1);
+  --neon-red: hsla(0, 84%, 60%, 1);
 }
 
 body {
@@ -101,19 +105,192 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom glow effects for neon accenting */
-.glow-primary {
-  box-shadow: 0 0 10px 0px hsla(175, 100%, 50%, 0.3);
+/* ─── Neon scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsla(175, 100%, 50%, 0.3); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: hsla(175, 100%, 50%, 0.6); }
+
+/* ─── Glow utils ─────────────────────────────────────── */
+.glow-primary { box-shadow: 0 0 12px 0px hsla(175, 100%, 50%, 0.35), 0 0 30px 0px hsla(175, 100%, 50%, 0.1); }
+.glow-text-primary { text-shadow: 0 0 10px hsla(175, 100%, 50%, 0.7), 0 0 30px hsla(175, 100%, 50%, 0.3); }
+.glow-emerald { box-shadow: 0 0 10px 0px hsla(142, 71%, 45%, 0.4); }
+.glow-red { box-shadow: 0 0 10px 0px hsla(0, 84%, 60%, 0.4); }
+
+/* ─── Scan lines overlay ─────────────────────────────── */
+.scan-lines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsla(0, 0%, 0%, 0.03) 2px,
+    hsla(0, 0%, 0%, 0.03) 4px
+  );
+  z-index: 100;
 }
 
-.glow-text-primary {
-  text-shadow: 0 0 8px hsla(175, 100%, 50%, 0.5);
+/* ─── HUD corner brackets ────────────────────────────── */
+.hud-corners {
+  position: relative;
+}
+.hud-corners::before,
+.hud-corners::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 5;
+}
+.hud-corners::before {
+  top: 0; left: 0;
+  border-top: 1px solid hsla(175, 100%, 50%, 0.6);
+  border-left: 1px solid hsla(175, 100%, 50%, 0.6);
+}
+.hud-corners::after {
+  bottom: 0; right: 0;
+  border-bottom: 1px solid hsla(175, 100%, 50%, 0.6);
+  border-right: 1px solid hsla(175, 100%, 50%, 0.6);
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* ─── Glitch animation ───────────────────────────────── */
+@keyframes glitch-1 {
+  0%, 100% { clip-path: inset(0 0 95% 0); transform: translate(-2px, 0); }
+  20%  { clip-path: inset(30% 0 50% 0); transform: translate(2px, 0); }
+  40%  { clip-path: inset(60% 0 20% 0); transform: translate(-1px, 0); }
+  60%  { clip-path: inset(80% 0 5% 0);  transform: translate(1px, 0); }
+  80%  { clip-path: inset(10% 0 80% 0); transform: translate(-2px, 0); }
 }
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+@keyframes glitch-2 {
+  0%, 100% { clip-path: inset(80% 0 5% 0);  transform: translate(2px, 0); }
+  20%  { clip-path: inset(10% 0 70% 0); transform: translate(-2px, 0); }
+  40%  { clip-path: inset(50% 0 30% 0); transform: translate(1px, 0); }
+  60%  { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 0); }
+  80%  { clip-path: inset(65% 0 10% 0); transform: translate(2px, 0); }
 }
+
+.glitch-text {
+  position: relative;
+}
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+.glitch-text::before {
+  color: hsla(175, 100%, 50%, 0.8);
+  animation: glitch-1 4s infinite;
+  animation-delay: 0.5s;
+}
+.glitch-text::after {
+  color: hsla(300, 100%, 65%, 0.6);
+  animation: glitch-2 4s infinite;
+}
+
+/* ─── Ticker tape scroll ─────────────────────────────── */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-inner {
+  animation: ticker-scroll 40s linear infinite;
+  white-space: nowrap;
+  display: inline-flex;
+}
+.ticker-inner:hover { animation-play-state: paused; }
+
+/* ─── Holo border animation ──────────────────────────── */
+@keyframes holo-rotate {
+  from { --angle: 0deg; }
+  to   { --angle: 360deg; }
+}
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.holo-border {
+  border: 1px solid transparent;
+  background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+              conic-gradient(from var(--angle),
+                hsla(175,100%,50%,0.9) 0deg,
+                hsla(175,100%,50%,0.1) 60deg,
+                hsla(270,100%,70%,0.6) 120deg,
+                hsla(175,100%,50%,0.1) 180deg,
+                hsla(175,100%,50%,0.9) 240deg,
+                hsla(175,100%,50%,0.1) 300deg,
+                hsla(175,100%,50%,0.9) 360deg
+              ) border-box;
+  animation: holo-rotate 4s linear infinite;
+}
+
+/* ─── Status pulse ───────────────────────────────────── */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 hsla(142, 71%, 45%, 0.6); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px hsla(142, 71%, 45%, 0); }
+}
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+@keyframes status-pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 hsla(0, 84%, 60%, 0.6); }
+  50%       { box-shadow: 0 0 0 4px hsla(0, 84%, 60%, 0); }
+}
+
+/* ─── Terminal cursor ────────────────────────────────── */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.terminal-cursor::after {
+  content: "█";
+  animation: blink-cursor 1s step-end infinite;
+  margin-left: 2px;
+  color: hsla(175, 100%, 50%, 0.8);
+  font-size: 0.75em;
+}
+
+/* ─── Flicker ────────────────────────────────────────── */
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96%            { opacity: 0.8; }
+  97%            { opacity: 1; }
+  98%            { opacity: 0.6; }
+  99%            { opacity: 1; }
+}
+.flicker { animation: flicker 6s infinite; }
+
+/* ─── Breathing glow ─────────────────────────────────── */
+@keyframes breathe-glow {
+  0%, 100% { box-shadow: 0 0 8px hsla(175, 100%, 50%, 0.2); }
+  50%       { box-shadow: 0 0 20px hsla(175, 100%, 50%, 0.5), 0 0 40px hsla(175, 100%, 50%, 0.15); }
+}
+.breathe-glow { animation: breathe-glow 3s ease-in-out infinite; }
+
+/* ─── Data row hover ─────────────────────────────────── */
+.data-row {
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.data-row:hover {
+  background: hsla(175, 100%, 50%, 0.04);
+  box-shadow: inset 2px 0 0 hsla(175, 100%, 50%, 0.7);
+}
+
+/* ─── Background grid ────────────────────────────────── */
+.bg-grid {
+  background-image:
+    linear-gradient(hsla(175, 100%, 50%, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, hsla(175, 100%, 50%, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Scrollbar hide ─────────────────────────────────── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
