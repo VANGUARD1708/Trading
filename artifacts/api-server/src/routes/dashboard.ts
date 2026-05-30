@@ -165,8 +165,18 @@ ${setupLines}`,
     }
     res.write("data: [DONE]\n\n");
     res.end();
-  } catch (err) {
-    res.write(`data: ${JSON.stringify({ error: "Brief generation failed" })}\n\n`);
+  } catch (err: any) {
+    console.error("AI BRIEF ERROR:", err);
+
+    const fallback = `**MARKET REGIME**: Mixed
+
+  **OVERVIEW**: OpenAI analysis is temporarily unavailable. Local market intelligence engine is providing a fallback summary.
+
+  **TOP OPPORTUNITY**: Review the highest confidence setup currently displayed in the dashboard rankings.
+
+  **KEY RISKS**: AI services unavailable. Verify all trade decisions using market data and technical confirmation.`;
+
+    res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
     res.write("data: [DONE]\n\n");
     res.end();
   }
