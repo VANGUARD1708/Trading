@@ -176,20 +176,63 @@ ${setupLines}`,
 router.post("/dashboard/smart-scan", async (_req, res) => {
   const { instruments, patterns, setups, instrumentLines, patternLines, setupLines } = await buildMarketContext();
   const openai = getOpenAI();
-
   if (!openai) {
-    const topInst = instruments.sort((a, b) => b.priceChangePct24h - a.priceChangePct24h);
-    const topSetup = setups[0];
+
+  const scored = instruments.map((inst) => {
+    let score = 50;
+
+    // sentiment
+    if (inst.marketSentiment === "strongly_bullish") score += 25;
+    else if (inst.marketSentiment === "bullish") score += 15;
+    else if (inst.marketSentiment === "bearish") score -= 15;
+    else if (inst.marketSentiment === "strongly_bearish") score -= 25;
+
+    // momentum
+    score += Math.min(Math.abs(inst.priceChangePct24h) * 3, 20);
+
+    // volume
+    if (inst.volume24h > 5_000_000_000) score += 15;
+    else if (inst.volume24h > 1_000_000_000) score += 10;
+
+    return {
+      ...inst,
+      scanScore: Math.max(0, Math.min(100, score)),
+    };
+  });
+
+    const ranked = [...scored].sort(
+      (a, b) => b.scanScore - a.scanScore
+    );
+
+    const topInst = ranked[0];
+
     res.json({
-      marketRegime: instruments.filter(i => i.marketSentiment.includes("bullish")).length > 2 ? "trending_bull" : "ranging",
-      regimeDescription: "Broad momentum building across risk assets",
-      overallScore: 71,
+      marketRegime:
+        instruments.filter(i =>
+          i.marketSentiment.includes("bullish")
+        ).length > 2
+          ? "trending_bull"
+          : "ranging",
+
+      regimeDescription:
+        "Broad momentum building across risk assets",
+
+      overallScore:
+      ranked.length
+        ? Math.round(
+            ranked
+              .slice(0, 3)
+              .reduce((s, x) => s + x.scanScore, 0) /
+            Math.min(ranked.length, 3)
+          )
+        : 0,
+
       scanDurationMs: 142,
-      opportunities: instruments.slice(0, 3).map((inst, i) => ({
+        opportunities: ranked.slice(0, 3).map((inst, i) => ({
         rank: i + 1,
         symbol: inst.symbol,
         direction: inst.priceChangePct24h >= 0 ? "long" : "short",
-        conviction: Math.round(85 - i * 8),
+        conviction: inst.scanScore,
         setupType: i === 0 ? "Momentum Breakout" : i === 1 ? "Trend Continuation" : "Range Reversal",
         thesis: `${inst.symbol} shows ${inst.marketSentiment.replace(/_/g, " ")} momentum with price at $${inst.currentPrice.toLocaleString()}. Volume profile confirms institutional accumulation at this level.`,
         entryLow: inst.currentPrice * 0.998,
@@ -202,7 +245,7 @@ router.post("/dashboard/smart-scan", async (_req, res) => {
       })),
       avoidSymbols: instruments.filter(i => i.marketSentiment.includes("bearish")).map(i => i.symbol).slice(0, 1),
       avoidReason: "Bearish price structure — wait for confirmed reversal before entering long",
-      executiveSummary: `Markets show ${topInst[0]?.symbol ?? "BTC/USD"} as the strongest mover with +${topInst[0]?.priceChangePct24h.toFixed(2) ?? "2.8"}% momentum. Overall environment is constructive for risk assets. ${setups.length} active setups across the watchlist with average confidence of ${Math.round(setups.reduce((s, x) => s + x.confidence, 0) / (setups.length || 1) * 100)}%.`,
+      executiveSummary: `Markets show ${topInst?.symbol ?? "BTC/USD"} as the strongest mover with +${topInst?.priceChangePct24h?.toFixed(2) ?? "2.8"}% momentum. Overall environment is constructive for risk assets. ${setups.length} active setups across the watchlist with average confidence of ${Math.round((setups.reduce((s, x) => s + x.confidence, 0) / (setups.length || 1)) * 100)}%.`,
     });
     return;
   }
@@ -262,10 +305,109 @@ Include top 3 opportunities ranked by conviction. Be specific with actual prices
       ],
     });
 
-    const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
-    res.json({ ...parsed, scanDurationMs: Math.round(Math.random() * 800 + 400) });
+    const parsed = JSON.parse(
+      completion.choices[0]?.message?.content ?? "{}"
+    );
+
+    res.json({
+      marketRegime: parsed.marketRegime ?? "mixed",
+
+      regimeDescription:
+        parsed.regimeDescription ??
+        "Market conditions are being evaluated.",
+
+      overallScore:
+        parsed.overallScore ?? 0,
+
+      opportunities:
+        Array.isArray(parsed.opportunities)
+          ? parsed.opportunities
+          : [],
+
+      avoidSymbols:
+        Array.isArray(parsed.avoidSymbols)
+          ? parsed.avoidSymbols
+          : [],
+
+      avoidReason:
+        parsed.avoidReason ?? "",
+
+      executiveSummary:
+        parsed.executiveSummary ??
+        "No executive summary generated.",
+
+      scanDurationMs:
+        Math.round(Math.random() * 800 + 400),
+    });
   } catch (err) {
-    res.status(500).json({ error: "Scan failed" });
+    console.error("Smart Scan Error:", err);
+
+    const ranked = instruments
+      .sort(
+        (a, b) =>
+          Math.abs(b.priceChangePct24h) -
+          Math.abs(a.priceChangePct24h)
+      )
+      .slice(0, 5);
+
+    return res.json({
+      marketRegime: "mixed",
+
+      regimeDescription:
+        "Fallback scan engine active",
+
+      overallScore: 65,
+
+      scanDurationMs: 100,
+
+      opportunities: ranked.map((inst, i) => ({
+        rank: i + 1,
+
+        symbol: inst.symbol,
+
+        direction:
+          inst.priceChangePct24h >= 0
+            ? "long"
+            : "short",
+
+        conviction: 85 - i * 5,
+
+        setupType:
+          "NexusFlow Quant Signal",
+
+        thesis:
+          `${inst.symbol} shows strong momentum and remains one of the highest ranked assets.`,
+
+        entryLow:
+          inst.currentPrice * 0.995,
+
+        entryHigh:
+          inst.currentPrice * 1.005,
+
+        target:
+          inst.currentPrice * 1.03,
+
+        stopLoss:
+          inst.currentPrice * 0.985,
+
+        riskReward: 2,
+
+        urgency:
+          i === 0
+            ? "high"
+            : "medium",
+
+        keyRisk:
+          "OpenAI unavailable. Local scoring engine used.",
+      })),
+
+      avoidSymbols: [],
+
+      avoidReason: "",
+
+      executiveSummary:
+        "OpenAI unavailable. NexusFlow generated opportunities using local market intelligence.",
+    });
   }
 });
 

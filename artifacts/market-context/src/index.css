@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -52,50 +53,51 @@
 }
 
 :root {
-  --background: 222 84% 3%;
-  --foreground: 210 40% 92%;
+  --background: 228 34% 4%;
+  --foreground: 210 40% 96%;
 
-  --card: 222 60% 5%;
-  --card-foreground: 210 40% 92%;
-  --card-border: 216 34% 14%;
+  --card: 225 32% 7%;
+  --card-foreground: 210 40% 96%;
+  --card-border: 225 20% 14%;
 
-  --popover: 222 60% 5%;
-  --popover-foreground: 210 40% 92%;
-  --popover-border: 216 34% 14%;
+  --popover: 225 32% 7%;
+  --popover-foreground: 210 40% 96%;
+  --popover-border: 225 20% 14%;
 
-  --primary: 175 100% 50%;
-  --primary-foreground: 222 84% 3%;
+  --primary: 192 100% 62%;
+  --primary-foreground: 225 35% 5%;
 
-  --secondary: 215 25% 20%;
+  --secondary: 260 70% 60%;
   --secondary-foreground: 210 40% 98%;
 
-  --muted: 216 34% 12%;
-  --muted-foreground: 215 20% 55%;
+  --muted: 225 20% 12%;
+  --muted-foreground: 215 20% 68%;
 
-  --accent: 175 100% 50%;
-  --accent-foreground: 222 84% 3%;
+  --accent: 275 90% 68%;
+  --accent-foreground: 225 35% 5%;
 
-  --destructive: 0 84% 60%;
+  --destructive: 0 85% 62%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 216 34% 13%;
-  --input: 216 34% 13%;
-  --ring: 175 100% 50%;
+  --border: 225 20% 16%;
+  --input: 225 20% 16%;
+  --ring: 192 100% 62%;
 
-  --sidebar: 222 84% 3%;
-  --sidebar-foreground: 210 40% 92%;
-  --sidebar-border: 216 34% 13%;
-  --sidebar-primary: 175 100% 50%;
-  --sidebar-primary-foreground: 222 84% 3%;
-  --sidebar-accent: 216 34% 12%;
-  --sidebar-accent-foreground: 210 40% 92%;
+  --sidebar: 228 34% 4%;
+  --sidebar-foreground: 210 40% 96%;
+  --sidebar-border: 225 20% 14%;
+  --sidebar-primary: 192 100% 62%;
+  --sidebar-primary-foreground: 225 35% 5%;
+  --sidebar-accent: 225 20% 12%;
+  --sidebar-accent-foreground: 210 40% 96%;
 
   --radius: 0.25rem;
 
-  --neon-cyan: hsla(175, 100%, 50%, 1);
-  --neon-cyan-dim: hsla(175, 100%, 50%, 0.15);
-  --neon-green: hsla(142, 71%, 45%, 1);
-  --neon-red: hsla(0, 84%, 60%, 1);
+  --neural-blue: hsla(192,100%,62%,1);
+  --quantum-purple: hsla(275,90%,68%,1);
+
+  --bull: hsla(155,90%,55%,1);
+  --bear: hsla(0,85%,65%,1);
 }
 
 body {
@@ -285,12 +287,90 @@ body {
 
 /* ─── Background grid ────────────────────────────────── */
 .bg-grid {
-  background-image:
-    linear-gradient(hsla(175, 100%, 50%, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, hsla(175, 100%, 50%, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background:
+    radial-gradient(
+      circle at top,
+      hsla(192,100%,62%,0.08),
+      transparent 45%
+    ),
+    linear-gradient(
+      hsla(192,100%,62%,0.025) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      hsla(192,100%,62%,0.025) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    auto,
+    60px 60px,
+    60px 60px;
 }
 
 /* ─── Scrollbar hide ─────────────────────────────────── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.neural-panel {
+  position: relative;
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      180deg,
+      hsla(225,20%,10%,0.95),
+      hsla(225,20%,7%,0.95)
+    );
+
+  border: 1px solid hsla(192,100%,62%,0.12);
+
+  backdrop-filter: blur(20px);
+}
+
+.neural-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      hsla(192,100%,62%,0.04),
+      transparent
+    );
+
+  transform: translateX(-100%);
+  animation: neural-scan 8s linear infinite;
+}
+
+@keyframes neural-scan {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.ai-core {
+  position: relative;
+}
+
+.ai-core::after {
+  content: "";
+
+  position: absolute;
+  inset: -2px;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      135deg,
+      hsla(192,100%,62%,0.4),
+      hsla(275,90%,68%,0.4)
+    );
+
+  filter: blur(20px);
+
+  z-index: -1;
+}

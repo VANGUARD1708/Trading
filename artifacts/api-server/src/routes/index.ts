@@ -5,6 +5,7 @@ import dashboardRouter from "./dashboard";
 import anthropicRouter from "./anthropic";
 import scenariosRouter from "./scenarios";
 import livePricesRouter from "./live-prices";
+import searchRouter from "./search";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(dashboardRouter);
 router.use(anthropicRouter);
 router.use(scenariosRouter);
 router.use(livePricesRouter);
+router.use(searchRouter);
 
 export default router;

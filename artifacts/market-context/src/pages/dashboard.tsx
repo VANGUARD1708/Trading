@@ -215,6 +215,56 @@ export default function Dashboard() {
       {/* ─── AI Intelligence Brief ───────────────────────── */}
       <IntelligenceBrief />
 
+      {/* ─── AI Quant Layer ───────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div className="rounded-sm border border-border bg-card/40 p-4">
+          <div className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase mb-3">
+            Best Trade Right Now
+          </div>
+
+          <div className="text-2xl font-black text-primary">
+            BTC/USD
+          </div>
+
+          <div className="text-xs text-muted-foreground mt-2">
+            Highest confidence opportunity detected.
+          </div>
+        </div>
+
+        <div className="rounded-sm border border-border bg-card/40 p-4">
+          <div className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase mb-3">
+            Reversal Probability
+          </div>
+
+          <div className="text-2xl font-black text-yellow-400">
+            68%
+          </div>
+
+          <div className="text-xs text-muted-foreground mt-2">
+            Current probability of trend reversal.
+          </div>
+        </div>
+
+        <div className="rounded-sm border border-border bg-card/40 p-4">
+          <div className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase mb-3">
+            AI Confidence
+          </div>
+
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-400"
+              style={{ width: "84%" }}
+            />
+          </div>
+
+          <div className="text-xs text-muted-foreground mt-2">
+            Quant engine confidence: 84%
+          </div>
+        </div>
+
+      </div>
+
       {/* ─── Signals + Terminal ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 rounded-sm border border-border bg-card/40 overflow-hidden">

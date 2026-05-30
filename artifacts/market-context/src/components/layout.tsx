@@ -63,7 +63,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* ─── Sidebar ─────────────────────────────────────── */}
-        <div className="w-60 border-r border-border bg-card flex flex-col z-20 relative overflow-hidden scan-lines">
+        <div className="hidden md:flex w-60 border-r border-border bg-card flex-col z-20 relative overflow-hidden scan-lines">
           {/* Sidebar vertical glow strip */}
           <div className="absolute top-0 bottom-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent pointer-events-none" />
 
@@ -162,7 +162,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="absolute bottom-3 left-3 w-5 h-5 border-b border-l border-primary/40 pointer-events-none z-10" />
           <div className="absolute bottom-3 right-3 w-5 h-5 border-b border-r border-primary/40 pointer-events-none z-10" />
 
-          <main className="flex-1 overflow-y-auto p-6 md:p-8 z-10">
+          <main className="flex-1 overflow-y-auto p-4 md:p-8 z-10">
             {children}
           </main>
         </div>

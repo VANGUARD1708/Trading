@@ -91,13 +91,53 @@ export function SmartScan() {
     setOpen(true);
     setScanning(true);
     setResult(null);
+
     try {
       const base = (window as any).__API_BASE__ ?? "";
-      const res = await fetch(`${base}/api/dashboard/smart-scan`, { method: "POST" });
+
+      const res = await fetch(
+        `${base}/api/dashboard/smart-scan`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const data = await res.json();
-      setResult(data);
-    } catch {
-      setResult(null);
+
+      console.log("Smart Scan Result:", data);
+
+      setResult({
+        marketRegime: data.marketRegime ?? data.regime ?? "mixed",
+        regimeDescription:
+          data.regimeDescription ??
+          "Market conditions are currently being evaluated.",
+        overallScore: data.overallScore ?? 0,
+        scanDurationMs: data.scanDurationMs ?? 0,
+        opportunities: data.opportunities ?? [],
+        avoidSymbols: data.avoidSymbols ?? [],
+        avoidReason: data.avoidReason ?? "",
+        executiveSummary:
+          data.executiveSummary ??
+          "No executive summary was returned.",
+      });
+    } catch (error) {
+      console.error("Smart Scan Error:", error);
+
+      setResult({
+        marketRegime: "mixed",
+        regimeDescription: "Unable to determine market regime.",
+        overallScore: 0,
+        scanDurationMs: 0,
+        opportunities: [],
+        avoidSymbols: [],
+        avoidReason: "",
+        executiveSummary:
+          "Smart Scan encountered an error while processing the request.",
+      });
     } finally {
       setScanning(false);
     }
@@ -157,8 +197,14 @@ export function SmartScan() {
                     <div className="flex items-start gap-4 p-3 rounded-sm bg-muted/20 border border-border/40">
                       <div>
                         <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-0.5">Market Regime</div>
-                        <div className={`font-mono font-bold text-sm ${REGIME_COLOR[result.marketRegime] ?? "text-primary"}`}>
-                          {result.marketRegime.replace(/_/g, " ").toUpperCase()}
+                        <div
+                          className={`font-mono font-bold text-sm ${
+                            REGIME_COLOR[result.marketRegime ?? "mixed"] ?? "text-primary"
+                          }`}
+                        >
+                          {(result.marketRegime ?? "mixed")
+                            .replace(/_/g, " ")
+                            .toUpperCase()}
                         </div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">{result.regimeDescription}</div>
                       </div>

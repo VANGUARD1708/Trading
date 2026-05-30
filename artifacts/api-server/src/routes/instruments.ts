@@ -366,7 +366,16 @@ router.post("/instruments/:symbol/analyze", async (req, res) => {
   const insertedZones = await db.insert(liquidityZonesTable).values(zonesToInsert).returning();
 
   const setupsToInsert = Array.from({ length: 2 }, () => {
-    const dir = Math.random() > 0.5 ? "long" : "short";
+    const dir =
+      instrument.marketSentiment === "strongly_bullish" ||
+      instrument.marketSentiment === "bullish"
+        ? "long"
+        : instrument.marketSentiment === "strongly_bearish" ||
+          instrument.marketSentiment === "bearish"
+        ? "short"
+        : Math.random() > 0.5
+        ? "long"
+        : "short";
     const entry = instrument.currentPrice * (dir === "long" ? 1.005 : 0.995);
     const sl = entry * (dir === "long" ? 0.975 : 1.025);
     const tp1 = entry * (dir === "long" ? 1.025 : 0.975);
